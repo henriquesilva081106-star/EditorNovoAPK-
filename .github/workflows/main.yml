@@ -27,7 +27,8 @@ jobs:
       - name: Initialize Capacitor and Sync
         run: |
           # Corrige o erro de Missing appId e garante que a plataforma Android está instalada
-          npm install @capacitor/android
+          npm install @capacitor/android --force
+
           npx cap init "Editor Final APK" "com.seunome.finalapk" --web-dir www
           npx cap add android
           npx cap sync android

@@ -24,11 +24,13 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Build Web Assets (Cria a pasta www)
+        run: npm run build
+
       - name: Initialize Capacitor and Sync
         run: |
-          # Corrige o erro de Missing appId e garante que a plataforma Android está instalada
+          # Corrige o erro de dependência e inicializa o app
           npm install @capacitor/android --force
-
           npx cap init "Editor Final APK" "com.seunome.finalapk" --web-dir www
           npx cap add android
           npx cap sync android

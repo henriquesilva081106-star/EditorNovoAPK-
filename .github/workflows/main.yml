@@ -15,7 +15,7 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Set up Java 17 
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -24,8 +24,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Initialize Capacitor and Build App
+      - name: Initialize Capacitor and Sync
         run: |
+          # Corrige o erro de Missing appId e garante que a plataforma Android está instalada
+          npm install @capacitor/android
+          npx cap init "Editor Final APK" "com.seunome.finalapk" --web-dir www
           npx cap add android
           npx cap sync android
 

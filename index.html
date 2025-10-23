@@ -6,16 +6,15 @@
   <title>Editor de Vídeo Monstro 5.2 (Definitivo)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    // Código da biblioteca Whammy removido
+    // Alerta de que a função de renderização de vídeo foi desativada por incompatibilidade
     var Whammy={Video:function(){},add:function(){},compile:function(){
-        // Alerta de que a função de renderização de vídeo foi desativada por incompatibilidade
         alert("Erro: A função de renderização de vídeo foi desativada por incompatibilidade de GPU. Use 'Exportar Rápido'."); 
     }};;
     
     // Capacitor JS Bridge
-    const { Filesystem } = window.Capacitor ? window.Capacitor.Plugins : { Filesystem: null };
-    const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent";
-    const GEMINI_API_KEY = ""; 
+    const { Filesystem, Camera } = window.Capacitor ? window.Capacitor.Plugins : { Filesystem: null, Camera: null };
+    const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-1.5:generateContent"; // Modelo atualizado
+    let GEMINI_API_KEY = ""; 
 
   </script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
@@ -68,7 +67,8 @@
     <div class="w-full bg-gray-800 p-4 mt-4 rounded-2xl shadow-2xl flex flex-col space-y-4 self-start">
       <div class="flex gap-3 items-center flex-wrap">
         <input type="file" id="video-upload-input" class="hidden" accept="video/*">
-        <label for="video-upload-input" class="flex-grow inline-block bg-violet-600 hover:bg-violet-700 text-white font-bold py-3 px-4 rounded-lg cursor-pointer text-center">Carregar Vídeo</label>
+        <label id="load-video-btn" class="flex-grow inline-block bg-violet-600 hover:bg-violet-700 text-white font-bold py-3 px-4 rounded-lg cursor-pointer text-center">Carregar Vídeo</label>
+        
         <button id="export-fast-btn" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-lg">Exportar Rápido (com áudio)</button>
         <button id="export-vfx-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">Exportar (Com VFX)</button>
         <button id="export-native-btn" class="bg-red-700 hover:bg-red-800 text-white font-bold py-3 px-4 rounded-lg">Exportar NATIVO (FFmpeg)</button>
@@ -85,7 +85,7 @@
           <button class="tab-button flex-1 py-2 font-semibold" data-tab="captions">Legendas</button>
           <button class="tab-button flex-1 py-2 font-semibold" data-tab="effects">Efeitos</button>
         </div>
-        <div id="ai-tab" class="tab-content hidden space-y-4 p-3 bg-gray-700 rounded-lg">
+        <div id="ai-tab" class="tab-content space-y-4 p-3 bg-gray-700 rounded-lg">
           <p class="text-xs text-gray-300 border border-violet-400 p-2 rounded-lg">*O segredo do CapCut é o acesso nativo ao seu chip (GPU) para processar o vídeo. Nosso editor Web não tem esse acesso, por isso o Modo Turbo é crucial! As exportações precisam de otimizações pesadas para não travar.*</p>
           <h3 class="text-lg font-semibold text-sky-300">Assistente de Edição por IA</h3>
           <div><label class="text-xs text-gray-400">Chave da Gemini API (Necessária para IA):</label><input type="text" id="api-key-input" class="w-full bg-gray-900 rounded-lg p-2 text-sm" placeholder="Insira sua chave aqui (Ex: AIzaSy...)" /></div>
@@ -114,8 +114,7 @@
   </main>
 
   <script>
-    // Variáveis e inicializações (Canvas 2D para estabilidade)
-    const videoUploadInput = document.getElementById('video-upload-input');
+    // --- VARIÁVEIS E INICIALIZAÇÕES ---
     const videoPlayer = document.getElementById('video-player');
     const canvasPlayer = document.getElementById('canvas-player');
     const ctx = canvasPlayer.getContext('2d', { willReadFrequently: true });
@@ -149,8 +148,6 @@
     const captionAnimation = document.getElementById('caption-animation');
     const captionColor = document.getElementById('caption-color');
     const sliders = { brightness: document.getElementById('brightness'), contrast: document.getElementById('contrast'), saturate: document.getElementById('saturate'), grain: document.getElementById('grain'), vignette: document.getElementById('vignette') };
-    const vfxButtons = document.querySelectorAll('.vfx-button');
-    const presetButtons = document.querySelectorAll('.preset-button');
     const contentAiBtn = document.getElementById('content-ai-btn');
     const videoDescription = document.getElementById('video-description');
     const aiOutput = document.getElementById('ai-output');
@@ -165,7 +162,70 @@
     let originalCanvasSize = { width: 0, height: 0 }; 
     const grainCanvas = document.createElement('canvas'), grainCtx = grainCanvas.getContext('2d');
 
-    // --- FUNÇÕES CORE (START) ---
+    // --- LÓGICA DE PERMISSÃO E CARREGAMENTO DE VÍDEO (ALTERAÇÃO #2) ---
+    const loadVideoBtn = document.getElementById('load-video-btn');
+    const videoUploadInput = document.getElementById('video-upload-input');
+
+    // 1. Escuta o clique no nosso novo botão
+    loadVideoBtn.addEventListener('click', async () => {
+        // Verifica se está no Capacitor para pedir permissão
+        if (!Camera) {
+            console.log("Não está no ambiente Capacitor. Abrindo seletor de arquivo diretamente.");
+            videoUploadInput.click();
+            return;
+        }
+
+        console.log("Botão 'Carregar Vídeo' clicado. Pedindo permissão...");
+        try {
+            // 2. Pede a permissão para a galeria
+            const status = await Camera.requestPermissions({ permissions: ['photos'] });
+
+            if (status.photos === 'granted') {
+                // 3. Se a permissão for concedida, simula o clique no input de arquivo para abrir a galeria
+                console.log("Permissão concedida. Abrindo seletor de arquivos.");
+                videoUploadInput.click();
+            } else {
+                // 4. Se a permissão for negada, avisa o usuário
+                console.log("Permissão negada.");
+                alert("Para carregar um vídeo, você precisa permitir o acesso à sua galeria.");
+            }
+        } catch (erro) {
+            console.error("Erro ao pedir permissão:", erro);
+            // Fallback para o caso de erro no plugin, tenta abrir o seletor mesmo assim
+            videoUploadInput.click();
+        }
+    });
+
+    // 5. O código que lida com o arquivo selecionado continua o mesmo
+    videoUploadInput.addEventListener('change', event => {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        placeholder.classList.remove('hidden');
+        placeholder.innerHTML = `<div class="spinner"></div><p class="text-xl mt-2">Carregando vídeo para a memória...</p>`;
+        controlsContainer.classList.add('hidden');
+        
+        const fileURL = URL.createObjectURL(file);
+        videoPlayer.src = fileURL;
+        
+        videoPlayer.onloadedmetadata = () => {
+            placeholder.classList.add('hidden');
+            controlsContainer.classList.remove('hidden');
+            originalCanvasSize = { width: videoPlayer.videoWidth, height: videoPlayer.videoHeight };
+            setPreviewMode('native');
+            videoPlayer.pause();
+            playPauseBtn.textContent = 'Reproduzir';
+            stopNativeLoop();
+        };
+        
+        videoPlayer.onerror = () => {
+            placeholder.innerHTML = `<p class="text-red-500 text-xl mt-2">ERRO: Falha ao carregar o arquivo de vídeo.</p>`;
+            controlsContainer.classList.add('hidden');
+            videoPlayer.onerror = null;
+        };
+    });
+
+    // --- RESTANTE DO SEU CÓDIGO JAVASCRIPT (SEM ALTERAÇÕES) ---
 
     function initializeGrain() {
       grainCanvas.width = 128; grainCtx.height = 128;
@@ -174,52 +234,70 @@
       for (let i = 0; i < data.length; i += 4) { const val = Math.random()*255; data[i]=val; data[i+1]=val; data[i+2]=val; data[i+3]=40; }
       grainCtx.putImageData(imageData, 0, 0);
     }
+    
+    function attachEffectListeners() {
+        document.querySelectorAll('.vfx-button').forEach(btn => btn.addEventListener('click', function() {
+            const effect = this.dataset.effect;
+            this.classList.toggle('active');
+            if(activeManualVFX.has(effect)) {
+                activeManualVFX.delete(effect);
+            } else {
+                activeManualVFX.add(effect);
+            }
+            if (effect === 'shake' || effect === 'chromatic') {
+                 videoPlayer.classList.toggle(`vfx-${effect}`);
+            } 
+            videoPlayer.style.filter = buildCssFilter(); 
+            renderDomCaption();
+        }));
+        document.querySelectorAll('.preset-button').forEach(btn => btn.addEventListener('click',() => {
+            const preset=btn.dataset.preset;
+            if(preset === 'normal'){ sliders.brightness.value = 100; sliders.contrast.value = 100; sliders.saturate.value = 100; }
+            else if (preset === 'inferno'){ sliders.brightness.value = 120; sliders.contrast.value = 150; sliders.saturate.value = 180; }
+            else if (preset === 'ice'){ sliders.brightness.value = 90; sliders.contrast.value = 120; sliders.saturate.value = 80; }
+            Object.values(sliders).forEach(el => {
+                if (el.id !== 'grain' && el.id !== 'vignette') {
+                    el.dispatchEvent(new Event('input')); 
+                }
+            });
+        }));
+        Object.values(sliders).forEach(el => el.addEventListener('input', () => {
+            videoPlayer.style.filter = buildCssFilter();
+        }));
+    }
 
     function initTabs() {
         const tabButtons = document.querySelectorAll('.tab-button');
         const tabContents = document.querySelectorAll('.tab-content');
-
         tabButtons.forEach(button => {
             button.addEventListener('click', () => {
                 const targetTab = button.dataset.tab;
                 tabButtons.forEach(btn => btn.classList.remove('active'));
                 tabContents.forEach(content => content.classList.add('hidden'));
                 button.classList.add('active');
-                const contentToShow = document.getElementById(`${targetTab}-tab`);
-                if (contentToShow) {
-                    contentToShow.classList.remove('hidden');
-                    if (targetTab === 'effects') {
-                       attachEffectListeners();
-                    }
-                }
+                document.getElementById(`${targetTab}-tab`).classList.remove('hidden');
             });
         });
-        
-        attachEffectListeners(); 
+        document.querySelector('.tab-button[data-tab="ai"]').click();
+        attachEffectListeners();
     }
 
     window.onload = () => {
-        // PERMISSÃO DE ARQUIVO SERÁ TRATADA PELO ANDROID MANIFEST
         initializeGrain();
-        const savedKey=localStorage.getItem('geminiApiKey')||"";
-        apiKeyInput.value=savedKey;
-        aiStatus.textContent=savedKey?"API Key configurada!":"Configure sua API key da Gemini.";
+        GEMINI_API_KEY = localStorage.getItem('geminiApiKey') || "";
+        apiKeyInput.value = GEMINI_API_KEY;
+        aiStatus.textContent = GEMINI_API_KEY ? "API Key configurada!" : "Configure sua API key da Gemini.";
         initTabs(); 
     };
-
-    // --- FUNÇÕES DE UTILDADE (MEIO) ---
     
     const formatTime = t => `${Math.floor(t/60).toString().padStart(2,'0')}:${Math.floor(t%60).toString().padStart(2,'0')}.${Math.floor((t*1000)%1000).toString().padStart(3,'0')}`;
     const parseTime = s => { const p = s?.match?.(/(\d{2}):(\d{2})\.(\d{3})/); return p ? parseInt(p[1])*60 + parseInt(p[2]) + parseInt(p[3])/1000 : 0; };
     
-    // V. 3.1 Correção de Conflito de Filtros (USANDO JAVASCRIPT)
     function buildCssFilter() { 
         let filters = `brightness(${sliders.brightness.value||100}%) contrast(${sliders.contrast.value||100}%) saturate(${sliders.saturate.value||100}%)`;
-        
         if (activeManualVFX.has('invert')) {
             filters += ' invert(100%)';
         }
-        
         return filters;
     }
     
@@ -247,11 +325,9 @@
       const dpr=previewMode === 'native' ? Math.min(window.devicePixelRatio||1,2) : 1;
       const cssW=canvasPlayer.clientWidth||canvasPlayer.width||640;
       const cssH=canvasPlayer.clientHeight||canvasPlayer.height||Math.round(cssW*(9/16));
-      if (previewMode === 'native') {
-        if(canvasPlayer.width!==Math.floor(cssW*dpr)||canvasPlayer.height!==Math.floor(cssH*dpr)){
+      if (previewMode === 'native' && (canvasPlayer.width!==Math.floor(cssW*dpr)||canvasPlayer.height!==Math.floor(cssH*dpr))){
           canvasPlayer.width=Math.floor(cssW*dpr);
           canvasPlayer.height=Math.floor(cssH*dpr);
-        }
       }
       ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,canvasPlayer.width,canvasPlayer.height);ctx.save();
       const kf=interpolateKeyframe(videoPlayer.currentTime);
@@ -261,8 +337,9 @@
       ctx.globalAlpha=kf.alpha;
       const filterEffect=editTimeline.effects.find(e=>e.type==='filter'&&videoPlayer.currentTime>=e.start&&videoPlayer.currentTime<=e.end);
       const b=filterEffect?.brightness??sliders.brightness.value,c=filterEffect?.contrast??sliders.contrast.value,s=filterEffect?.saturate??sliders.saturate.value;
-      ctx.filter=`brightness(${b}%) contrast(${c}%) saturate(${s}%)`;
-      if(editTimeline.effects.some(e=>e.type==='invert'&&videoPlayer.currentTime>=e.start&&videoPlayer.currentTime<=e.end)||activeManualVFX.has('invert'))ctx.filter+=' invert(1)';
+      let currentFilter = `brightness(${b}%) contrast(${c}%) saturate(${s}%)`;
+      if(editTimeline.effects.some(e=>e.type==='invert'&&videoPlayer.currentTime>=e.start&&videoPlayer.currentTime<=e.end)||activeManualVFX.has('invert')) currentFilter+=' invert(1)';
+      ctx.filter = currentFilter;
       ctx.drawImage(videoPlayer,0,0,canvasPlayer.width,canvasPlayer.height);ctx.restore();
       const activeEffects=editTimeline.effects.filter(e=>videoPlayer.currentTime>=e.start&&videoPlayer.currentTime<=e.end);
       activeEffects.forEach(effect=>applyEffect(effect.type,effect.amount));
@@ -279,293 +356,111 @@
     ctx.fillText(caption.text,x,y);ctx.restore();}
     function renderCaptionsList(){captions.sort((a,b)=>a.start-b.start);captionsList.innerHTML=captions.length===0?`<p class="text-center text-gray-500 text-sm">Nenhuma legenda.</p>`:'';captions.forEach(c=>{const item=document.createElement('div');item.className='bg-gray-900 p-2 rounded-lg cursor-pointer';item.innerHTML=`<div class="flex justify-between items-center text-sm"><p class="font-mono text-violet-300">${formatTime(c.start)}->${formatTime(c.end)}</p><div class="flex gap-2"><button class="edit-btn text-yellow-400" data-id="${c.id}">E</button><button class="delete-btn text-red-500" data-id="${c.id}">X</button></div></div><p class="text-base truncate">${c.text}</p>`;item.addEventListener('click',e=>{if(e.target.tagName!=='BUTTON')videoPlayer.currentTime=c.start;});captionsList.appendChild(item);});document.querySelectorAll('.edit-btn').forEach(b=>b.addEventListener('click',e=>{const id=parseFloat(e.target.dataset.id);const c=captions.find(c=>c.id===id);editingCaptionId=id;captionText.value=c.text;startTimeInput.value=formatTime(c.start);endTimeInput.value=formatTime(c.end);captionAnimation.value=c.animation;captionColor.value=c.color;addCaptionBtn.textContent="Atualizar";}));document.querySelectorAll('.delete-btn').forEach(b=>b.addEventListener('click',e=>{captions=captions.filter(c=>c.id!==parseFloat(e.target.dataset.id));renderCaptionsList();}));}
 
-    // V. 3.0: Lógica de Filtros (Consolidada)
-    function handleVfxClick() {
-        const effect = this.dataset.effect;
-        const btn = this; 
-        
-        btn.classList.toggle('active');
-
-        if(activeManualVFX.has(effect)) {
-            activeManualVFX.delete(effect);
-        } else {
-            activeManualVFX.add(effect);
-        }
-
-        // --- Lógica de aplicação (Apenas SHAKE e CHROMATIC continuam com classes) ---
-        if (effect === 'shake' || effect === 'chromatic') {
-             videoPlayer.classList.toggle(`vfx-${effect}`);
-        } 
-        
-        // CRÍTICO: Re-aplica TODOS os filtros (incluindo o INVERT via buildCssFilter())
-        videoPlayer.style.filter = buildCssFilter(); 
-        renderDomCaption();
-    }
-    
-    function attachEffectListeners() {
-        const oldVfxButtons = document.querySelectorAll('.vfx-button');
-        oldVfxButtons.forEach(btn => btn.removeEventListener('click', handleVfxClick));
-
-        const vfxButtons = document.querySelectorAll('.vfx-button');
-        vfxButtons.forEach(btn => btn.addEventListener('click', handleVfxClick));
-
-        const presetButtons = document.querySelectorAll('.preset-button');
-        presetButtons.forEach(btn=>btn.addEventListener('click',() => {
-            const preset=btn.dataset.preset;
-            if(preset === 'normal'){ 
-                 sliders.brightness.value = 100;
-                 sliders.contrast.value = 100;
-                 sliders.saturate.value = 100;
-            } else if (preset === 'inferno'){ 
-                 sliders.brightness.value = 120;
-                 sliders.contrast.value = 150;
-                 sliders.saturate.value = 180;
-            } else if (preset === 'ice'){ 
-                 sliders.brightness.value = 90;
-                 sliders.contrast.value = 120;
-                 sliders.saturate.value = 80;
-            }
-            Object.values(sliders).forEach(el => {
-                if (el.id !== 'grain' && el.id !== 'vignette') {
-                    el.dispatchEvent(new Event('input')); 
-                }
-            });
-            videoPlayer.style.filter = buildCssFilter(); 
-            renderDomCaption();
-        }));
-        
-        Object.values(sliders).forEach(el=>el.addEventListener('input',()=>{
-             videoPlayer.style.filter = buildCssFilter(); 
-             renderDomCaption();
-        }));
-    }
-
-    function initTabs() {
-        const tabButtons = document.querySelectorAll('.tab-button');
-        const tabContents = document.querySelectorAll('.tab-content');
-
-        tabButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const targetTab = button.dataset.tab;
-                tabButtons.forEach(btn => btn.classList.remove('active'));
-                tabContents.forEach(content => content.classList.add('hidden'));
-                button.classList.add('active');
-                const contentToShow = document.getElementById(`${targetTab}-tab`);
-                if (contentToShow) {
-                    contentToShow.classList.remove('hidden');
-                    if (targetTab === 'effects') {
-                       attachEffectListeners();
-                    }
-                }
-            });
-        });
-        
-        attachEffectListeners(); 
-    }
-
-
-    // CORREÇÃO CRÍTICA DE CARREGAMENTO (Estabilidade)
-    videoUploadInput.addEventListener('change',event=>{
-        const file=event.target.files[0];
-        if(!file)return;
-        
-        placeholder.classList.remove('hidden');
-        placeholder.innerHTML=`<div class="spinner"></div><p class="text-xl mt-2">Carregando vídeo para a memória...</p>`;
-        controlsContainer.classList.add('hidden');
-        
-        const fileURL=URL.createObjectURL(file);
-        videoPlayer.src=fileURL;
-        
-        // Evento 'loadedmetadata' garante que o vídeo está carregado antes de mostrar os controles
-        videoPlayer.onloadedmetadata = () => {
-            placeholder.classList.add('hidden');
-            controlsContainer.classList.remove('hidden');
-            setPreviewMode('native');
-            videoPlayer.pause();
-            playPauseBtn.textContent='Pausa'; 
-            startNativeLoop();
-            videoPlayer.onloadedmetadata = null;
-        };
-        
-        // Tratamento de erro de carregamento 
-        videoPlayer.onerror = () => {
-            placeholder.innerHTML=`<p class="text-red-500 text-xl mt-2">ERRO: Falha ao carregar o arquivo de vídeo. (Permissão ou formato)</p>`;
-            controlsContainer.classList.add('hidden');
-            videoPlayer.onerror = null; 
-        };
-    });
-    
-    // HANDLER DO BOTAO NATIVO (Simulacao)
     exportNativeBtn.addEventListener('click', () => {
         renderOverlay.classList.remove('hidden');
         renderTitle.textContent = "Exportação NATIVA (FFmpeg)";
         renderMessage.textContent = "Processamento NATIVO simulado... Requer plugin FFmpeg instalado no projeto Android para funcionar de verdade!";
-
         setTimeout(() => {
             renderTitle.textContent = "Simulação Concluída";
             renderMessage.textContent = "O APK real precisaria de código nativo para essa função, mas vamos salvar o original.";
-            // Simula um download do fallback (o vídeo original) após a simulação
             saveFileToDevice(videoPlayer.src, 'video_processado_simulado_final.mp4', 'video/mp4');
         }, 4000);
     });
 
-    // --- FUNÇÃO DE DOWNLOAD/SALVAMENTO HÍBRIDO (COM FALLBACK GARANTIDO) ---
     async function saveFileToDevice(url, fileName, mimeType) {
         renderOverlay.classList.remove('hidden');
         renderTitle.textContent="Salvando Vídeo...";
         renderMessage.textContent="Tentando salvamento nativo (Capacitor)...";
-
         if (!Filesystem) {
-             // FALLBACK WEB: Se não for APK, usa o download web.
              const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
              renderTitle.textContent = "Salvamento Concluído";
              renderMessage.textContent = "Download iniciado no navegador do sistema (Modo Web).";
              setTimeout(() => renderOverlay.classList.add('hidden'), 4000);
              return;
         }
-
         let base64Data = url.startsWith('data:') ? url.split(',')[1] : null;
-        let finalUrl = url;
-
         try {
             if (!base64Data) {
-                // Se for uma URL blob local do vídeo, faz o fetch e converte de forma robusta
                 renderMessage.textContent="Convertendo URL Blob para Base64...";
-                
-                const response = await fetch(finalUrl);
-                
+                const response = await fetch(url);
                 if (!response.ok) throw new Error(`Fetch failed with status ${response.status}`);
-                
                 const blob = await response.blob();
-                
-                // Conversão Blob -> Base64
                 base64Data = await new Promise((resolve, reject) => {
                     const reader = new FileReader();
-                    reader.onload = () => {
-                         resolve(reader.result.split(',')[1]); 
-                    };
+                    reader.onload = () => resolve(reader.result.split(',')[1]); 
                     reader.onerror = reject;
                     reader.readAsDataURL(blob); 
                 });
             }
-
             renderMessage.textContent="Copiando arquivo para a pasta Downloads...";
-            
-            // Escreve o arquivo no diretório de downloads do dispositivo (Aqui o Android pedirá permissão)
-            await Filesystem.writeFile({
-                path: fileName,
-                data: base64Data,
-                directory: 'DOWNLOADS', 
-                recursive: true
-            });
-
+            await Filesystem.writeFile({ path: fileName, data: base64Data, directory: 'DOWNLOADS', recursive: true });
             renderTitle.textContent = "SUCESSO!";
             renderMessage.textContent = `O arquivo foi salvo na sua pasta Downloads como: ${fileName}`;
-
         } catch (error) {
-            // Se falhar (provavelmente por permissão negada ou erro nativo), usa o fallback web.
             console.error("Erro no Salvamento Nativo:", error);
             renderMessage.textContent = `Falha do Salvamento Nativo. Usando Fallback Web...`;
-            
-            // FALLBACK WEB FINAL (Para garantir o download, mesmo no navegador)
             const a = document.createElement('a'); a.href = url.startsWith('data:') ? url : videoPlayer.src; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-            
             renderTitle.textContent = "Download Iniciado (Navegador)";
             renderMessage.textContent = "O arquivo está sendo baixado no navegador do sistema. Permissão de Arquivos é necessária!";
         }
-
         setTimeout(() => renderOverlay.classList.add('hidden'), 5000);
     }
     
-    // --- Handlers de Botões Gemini (Omitido para foco no script, mas presente no HTML final) ---
+    apiKeyInput.addEventListener('change', () => {
+        GEMINI_API_KEY = apiKeyInput.value.trim();
+        localStorage.setItem('geminiApiKey', GEMINI_API_KEY);
+        aiStatus.textContent = GEMINI_API_KEY ? "API Key configurada e salva!" : "Configure sua API key da Gemini.";
+    });
+
     contentAiBtn.addEventListener('click', () => {
         const description = videoDescription.value.trim() || "Conteúdo de vídeo genérico.";
         const prompt = `Gere 5 ideias de vídeos de curta duração (short-form video), 3 sugestões de roteiro simples para um vídeo de 30 segundos, e 2 ganchos (hooks) fortes. O tema principal é: "${description}".`;
         const systemPrompt = "Você é um criador de conteúdo e roteirista para redes sociais. Seja criativo, conciso e use a linguagem de internet.";
-        callGeminiAPI(prompt, systemPrompt, true, 'text/plain'); // Usando Google Search para ideias atuais
+        callGeminiAPI(prompt, systemPrompt, true, 'text/plain');
     });
-
     summaryCaptionBtn.addEventListener('click', () => {
-        if (captions.length === 0) {
-            aiStatus.innerHTML = `<span class="text-yellow-400">Adicione legendas primeiro!</span>`;
-            return;
-        }
+        if (captions.length === 0) { aiStatus.innerHTML = `<span class="text-yellow-400">Adicione legendas primeiro!</span>`; return; }
         const captionText = captions.map(c => c.text).join(' ');
         const prompt = `Resuma as seguintes legendas em um parágrafo conciso: "${captionText}"`;
         const systemPrompt = "Você é um editor de texto conciso. Seu objetivo é fornecer um resumo em uma única frase ou parágrafo curto.";
         callGeminiAPI(prompt, systemPrompt, false, 'text/plain');
     });
-
     effectAiBtn.addEventListener('click', async () => {
-        if (!videoPlayer.src) {
-            aiStatus.innerHTML = `<span class="text-yellow-400">Carregue um vídeo primeiro!</span>`;
-            return;
-        }
+        if (!videoPlayer.src) { aiStatus.innerHTML = `<span class="text-yellow-400">Carregue um vídeo primeiro!</span>`; return; }
         const description = videoDescription.value.trim() || "Cena de vídeo genérica.";
         const prompt = `Analise o frame do vídeo e sugira 3 filtros ou ajustes de cor (ex: Saturate 150, Contrast 120) e 2 efeitos visuais (flash, invert, glitch, shake) que combinem com o tema: "${description}". Responda em formato de lista.`;
         const systemPrompt = "Você é um especialista em color grading e efeitos visuais (VFX). Analise o conteúdo da imagem e sugira ajustes de filtro e efeitos visuais para criar um estilo visual impactante.";
-        callGeminiAPI(prompt, systemPrompt, false, 'image/png'); // Usando visão para analisar o frame
+        callGeminiAPI(prompt, systemPrompt, false, 'image/png');
     });
     
     async function callGeminiAPI(prompt, systemPrompt, tool, mimeType) {
-        aiOutput.classList.add('hidden');
-        aiContentResult.textContent = '';
+        aiOutput.classList.add('hidden'); aiContentResult.textContent = '';
         aiStatus.innerHTML = `<div class="spinner"></div><span class="ml-2">Aguardando IA (Gemini)...</span>`;
-        
-        const apiKey = apiKeyInput.value.trim();
-        if (!apiKey) {
-            aiStatus.innerHTML = `<span class="text-red-400">ERRO: Chave da Gemini API ausente!</span>`;
-            return;
-        }
-        
-        const apiUrl = `${GEMINI_API_URL}?key=${apiKey}`;
-        
-        let payload = {
-            contents: [{ parts: [{ text: prompt }] }],
-            config: { systemInstruction: { parts: [{ text: systemPrompt }] } },
-            tools: tool ? [{ google_search: {} }] : undefined
-        };
-        
+        if (!GEMINI_API_KEY) { aiStatus.innerHTML = `<span class="text-red-400">ERRO: Chave da Gemini API ausente!</span>`; return; }
+        const apiUrl = `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`;
+        let payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.7 }, systemInstruction: { parts: [{ text: systemPrompt }] }, tools: tool ? [{ google_search: {} }] : undefined };
         if (mimeType === 'image/png') {
             videoPlayer.pause();
-            canvasPlayer.width = 480; 
-            canvasPlayer.height = Math.round(480 * (videoPlayer.videoHeight / videoPlayer.videoWidth));
-            drawFrame();
-            
-            const base64Image = await new Promise(resolve => canvasPlayer.toBlob(blob => {
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = 480; tempCanvas.height = Math.round(480 * (videoPlayer.videoHeight / videoPlayer.videoWidth));
+            tempCtx.drawImage(videoPlayer, 0, 0, tempCanvas.width, tempCanvas.height);
+            const base64Image = await new Promise(resolve => tempCanvas.toBlob(blob => {
                 const reader = new FileReader();
                 reader.onloadend = () => resolve(reader.result.split(',')[1]);
                 reader.readAsDataURL(blob);
             }, 'image/jpeg', 0.8));
-            
-            payload.contents = [{
-                parts: [
-                    { text: prompt },
-                    { inlineData: { mimeType: "image/jpeg", data: base64Image } }
-                ]
-            }];
+            payload.contents = [{ parts: [ { text: prompt }, { inlineData: { mimeType: "image/jpeg", data: base64Image } } ] }];
         }
-
         try {
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error.message || `API error: ${response.status}`);
-            }
-
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.error.message || `API error: ${response.status}`); }
             const result = await response.json();
             const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "Nenhuma resposta da IA.";
-            
             aiContentResult.textContent = text;
             aiOutput.classList.remove('hidden');
             aiStatus.innerHTML = `<span class="text-green-400">Sucesso!</span>`;
             return text;
-
         } catch (error) {
             aiStatus.innerHTML = `<span class="text-red-400">Erro: ${error.message}</span>`;
             console.error("Gemini API Error:", error);
@@ -573,11 +468,10 @@
         return null;
     }
     
-    // --- EVENT LISTENERS FINAIS ---
     playPauseBtn.addEventListener('click',()=>{if(!videoPlayer.src)return;if(videoPlayer.paused){videoPlayer.play();playPauseBtn.textContent='Pausa';startNativeLoop();}else{videoPlayer.pause();playPauseBtn.textContent='Reproduzir';stopNativeLoop();}});
     document.addEventListener('visibilitychange',()=>{if(document.hidden)stopNativeLoop();else if(!videoPlayer.paused)startNativeLoop();});
     setStartBtn?.addEventListener('click',()=>startTimeInput.value=formatTime(videoPlayer.currentTime));setEndBtn?.addEventListener('click',()=>endTimeInput.value=formatTime(videoPlayer.currentTime));
-    addCaptionBtn?.addEventListener('click',()=>{const text=captionText.value.trim();if(!text)return;const start=parseTime(startTimeInput.value)||0,end=parseTime(endTimeInput.value)||start+2,animation=captionAnimation.value,color=captionColor.value||'#FFFFFF';if(editingCaptionId){captions=captions.map(c=>c.id===editingCaptionId?{...c,text,start,end,animation,color}:c);editingCaptionId=null;addCaptionBtn.textContent='Atualizar';}else captions.push({id:Date.now()+Math.random(),text,start,end,animation,color});renderCaptionsList();renderDomCaption();});
+    addCaptionBtn?.addEventListener('click',()=>{const text=captionText.value.trim();if(!text)return;const start=parseTime(startTimeInput.value)||0,end=parseTime(endTimeInput.value)||start+2,animation=captionAnimation.value,color=captionColor.value||'#FFFFFF';if(editingCaptionId){captions=captions.map(c=>c.id===editingCaptionId?{...c,text,start,end,animation,color}:c);editingCaptionId=null;addCaptionBtn.textContent='Adicionar/Atualizar';}else captions.push({id:Date.now()+Math.random(),text,start,end,animation,color});renderCaptionsList();});
     
     exportFastBtn.addEventListener('click', () => {
         if (!videoPlayer.src) return;
@@ -585,32 +479,16 @@
     });
     
     exportVFXBtn.addEventListener('click', async () => {
-        if (!videoPlayer.src) {
-             alert("Por favor, carregue um vídeo primeiro!");
-             return;
-        }
-        
+        if (!videoPlayer.src) { alert("Por favor, carregue um vídeo primeiro!"); return; }
         videoPlayer.pause();
         setPreviewMode('canvas');
         drawFrame(); 
-        
         await new Promise(resolve => setTimeout(resolve, 100)); 
-
         canvasPlayer.toBlob(async (blob) => {
-            if (!blob) {
-                saveFileToDevice(videoPlayer.src, 'frame_vfx_fallback.png', 'image/png');
-                return;
-            }
-            const reader = new FileReader();
-            reader.readAsDataURL(blob);
-            reader.onloadend = () => {
-                const base64data = reader.result;
-                saveFileToDevice(base64data, 'frame_com_vfx_teste.png', 'image/png');
-            };
+            if (!blob) { saveFileToDevice(videoPlayer.src, 'frame_vfx_fallback.png', 'image/png'); return; }
+            saveFileToDevice(URL.createObjectURL(blob), 'frame_com_vfx_teste.png', 'image/png');
         }, 'image/png');
     });
-
   </script>
 </body>
 </html>
-

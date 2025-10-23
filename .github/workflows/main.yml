@@ -25,14 +25,13 @@ jobs:
         run: npm install
 
       - name: Build Web Assets (Cria a pasta www)
+        # CRÍTICO: Roda o script de build que está no seu package.json
         run: npm run build
 
       - name: Initialize Capacitor and Sync
         run: |
-          # Corrige o erro de dependência e inicializa o app
-          npm install @capacitor/android --force
-          npx cap init "Editor Final APK" "com.seunome.finalapk" --web-dir www
-          npx cap add android
+          # Adiciona a plataforma Android e sincroniza plugins e assets
+          npx cap add android || true
           npx cap sync android
 
       - name: Set Permissions for Gradle Wrapper
@@ -47,3 +46,4 @@ jobs:
         with:
           name: app-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
+

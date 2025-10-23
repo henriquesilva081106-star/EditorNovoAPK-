@@ -21,5 +21,8 @@
       ]
     },
     "App": {}
+  },
+  "devDependencies": {
+    "vite": "^7.1.12"
   }
 }

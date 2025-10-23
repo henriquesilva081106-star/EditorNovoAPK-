@@ -23,6 +23,7 @@
     "App": {}
   },
   "devDependencies": {
+    "@capacitor/cli": "^7.4.4",
     "vite": "^7.1.12"
   }
 }

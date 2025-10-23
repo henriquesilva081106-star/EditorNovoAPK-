@@ -1,10 +1,16 @@
 {
+  "name": "editor-novo-apk",
+  "version": "1.0.0",
   "appId": "com.henrique.videoeditor",
   "appName": "Editor Final APK",
   "webDir": "www",
   "bundledWebRuntime": false,
   "server": {
     "androidScheme": "http"
+  },
+  "scripts": {
+    "build": "vite build",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "plugins": {
     "Filesystem": {},
@@ -17,4 +23,3 @@
     "App": {}
   }
 }
-

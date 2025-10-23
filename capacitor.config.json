@@ -1,7 +1,7 @@
 {
   "appId": "com.henrique.videoeditor",
   "appName": "Editor Final APK",
-  "webDir": "www",
+  "webDir": "dist",
   "bundledWebRuntime": false,
   "server": {
     "androidScheme": "http"

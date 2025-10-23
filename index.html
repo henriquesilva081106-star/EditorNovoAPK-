@@ -13,7 +13,6 @@
     }};;
     
     // Capacitor JS Bridge
-    // Removemos o plugin Permissions que deu erro 404.
     const { Filesystem } = window.Capacitor ? window.Capacitor.Plugins : { Filesystem: null };
     const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent";
     const GEMINI_API_KEY = ""; 
@@ -86,7 +85,7 @@
           <button class="tab-button flex-1 py-2 font-semibold" data-tab="captions">Legendas</button>
           <button class="tab-button flex-1 py-2 font-semibold" data-tab="effects">Efeitos</button>
         </div>
-        <div id="ai-tab" class="tab-content space-y-4 p-3 bg-gray-700 rounded-lg">
+        <div id="ai-tab" class="tab-content hidden space-y-4 p-3 bg-gray-700 rounded-lg">
           <p class="text-xs text-gray-300 border border-violet-400 p-2 rounded-lg">*O segredo do CapCut é o acesso nativo ao seu chip (GPU) para processar o vídeo. Nosso editor Web não tem esse acesso, por isso o Modo Turbo é crucial! As exportações precisam de otimizações pesadas para não travar.*</p>
           <h3 class="text-lg font-semibold text-sky-300">Assistente de Edição por IA</h3>
           <div><label class="text-xs text-gray-400">Chave da Gemini API (Necessária para IA):</label><input type="text" id="api-key-input" class="w-full bg-gray-900 rounded-lg p-2 text-sm" placeholder="Insira sua chave aqui (Ex: AIzaSy...)" /></div>
@@ -200,7 +199,7 @@
     }
 
     window.onload = () => {
-        // PERMISSÃO DE ARQUIVO SERÁ TRATADA PELO ANDROID MANIFEST, JÁ QUE O PLUGIN QUEBROU.
+        // PERMISSÃO DE ARQUIVO SERÁ TRATADA PELO ANDROID MANIFEST
         initializeGrain();
         const savedKey=localStorage.getItem('geminiApiKey')||"";
         apiKeyInput.value=savedKey;

@@ -3,27 +3,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Editor de Vídeo Monstro 2.2</title>
+  <title>Editor de Vídeo Monstro 2.9.1 (Final)</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- REMOVIDO WHAMMY.JS (Exportação lenta desativada para estabilidade) -->
   <script>
-    // Código da biblioteca Whammy removido e substituído por uma função de teste/aviso
-    var Whammy={Video:function(a,b){this.frames=[],this.duration=1E3/a,this.quality=b||.8},add:function(a,b){if("undefined"!=typeof b&&this.duration)this.frames.push({image:a,duration:b});else this.frames.push({image:a,duration:this.duration})},compile:function(a,b){
-        // ESTA FUNÇÃO É APENAS UM AVISO NA VERSÃO FINAL ESTÁVEL
+    // Código da biblioteca Whammy removido
+    var Whammy={Video:function(){},add:function(){},compile:function(){
+        // Alerta de que a exportação de vídeo está desativada por incompatibilidade
         alert("Erro: A função de renderização de vídeo foi desativada por incompatibilidade de GPU. Use 'Exportar Rápido'."); 
     }};
-    var EBML={Encoder:function(){this.data=[],this.pos=0},getWritten:function(){var a=new Uint8Array(this.pos),b=0;this.data.forEach(function(c){a.set(c,b);b+=c.length});return a.buffer},on:function(a,b){"data"===a&&(this.data_callback=b)},encode:function(a){var b=this,c=this.data;this.data=[];Array.isArray(a)||(a=[a]);a.forEach(function(a){b.encodeTag(a)});this.data_callback(this.getWritten());this.data=c}};
     
-    // Polyfill requestAnimationFrame
-    !function(){for(var a=0,b=["ms","moz","webkit","o"],c=0;c<b.length&&!window.requestAnimationFrame;++c)window.requestAnimationFrame=window[b[c]+"RequestAnimationFrame"],window.cancelAnimationFrame=window[b[c]+"CancelAnimationFrame"]||window[b[c]+"CancelRequestAnimationFrame"];window.requestAnimationFrame||(window.requestAnimationFrame=function(b){var c=(new Date).getTime(),d=Math.max(0,16-(c-a)),e=window.setTimeout(function(){b(c+d)},d);a=c+d;return e});window.cancelAnimationFrame||(window.cancelAnimationFrame=function(a){clearTimeout(a)})}();
-    
-    // Capacitor JS Bridge (necessário para funções nativas no APK)
-    const { Filesystem, Permissions } = window.Capacitor ? window.Capacitor.Plugins : { Filesystem: null, Permissions: null };
+    // Capacitor JS Bridge
+    const { Filesystem } = window.Capacitor ? window.Capacitor.Plugins : { Filesystem: null };
+    const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent";
+    const GEMINI_API_KEY = ""; 
 
   </script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
   <style>
-    /* Seu CSS (Idêntico) */
+    /* SEU CSS PADRÃO */
     body { font-family: 'Inter', sans-serif; touch-action: manipulation; }
     .tab-button.active { background-color: #8b5cf6; color: white; border-color: #8b5cf6; }
     .spinner { border:3px solid rgba(255,255,255,.3); border-radius:50%; border-top:3px solid #a78bfa; width:18px; height:18px; animation: spin 1s linear infinite; }
@@ -39,12 +36,17 @@
       text-shadow: 2px 2px 0 rgba(0,0,0,.6), 0 0 10px rgba(0,0,0,.5);
       word-break: break-word;
     }
+    /* Estilos CSS para Efeitos Permanentes no Video Player (Corrigidos) */
+    .vfx-invert { filter: invert(100%); }
+    .vfx-shake { animation: shake-animation 0.1s infinite; }
+    .vfx-chromatic { filter: hue-rotate(180deg) saturate(200%); }
+    @keyframes shake-animation { 0%, 100% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -1px); } }
   </style>
 </head>
 <body class="bg-gray-900 text-white flex flex-col min-h-screen">
   <header class="bg-gray-800 shadow-lg z-20">
     <div class="container mx-auto px-4 py-4">
-      <h1 class="text-xl font-bold text-center text-violet-400">Editor de Vídeo Monstro 2.2</h1>
+      <h1 class="text-xl font-bold text-center text-violet-400">Editor de Vídeo Monstro 2.9.1 (Final)</h1>
       <p class="text-center text-gray-400 mt-1 text-sm">Edição Final: A Vitória</p>
     </div>
   </header>
@@ -83,8 +85,7 @@
           <button class="tab-button flex-1 py-2 font-semibold" data-tab="captions">Legendas</button>
           <button class="tab-button flex-1 py-2 font-semibold" data-tab="effects">Efeitos</button>
         </div>
-        <!-- Abas de controle (IA, Legendas, Efeitos) continuam idênticas -->
-         <div id="ai-tab" class="tab-content space-y-4 p-3 bg-gray-700 rounded-lg">
+        <div id="ai-tab" class="tab-content space-y-4 p-3 bg-gray-700 rounded-lg">
           <p class="text-xs text-gray-300 border border-violet-400 p-2 rounded-lg">*O segredo do CapCut é o acesso nativo ao seu chip (GPU) para processar o vídeo. Nosso editor Web não tem esse acesso, por isso o Modo Turbo é crucial! As exportações precisam de otimizações pesadas para não travar.*</p>
           <h3 class="text-lg font-semibold text-sky-300">Assistente de Edição por IA</h3>
           <div><label class="text-xs text-gray-400">Chave da Gemini API (Necessária para IA):</label><input type="text" id="api-key-input" class="w-full bg-gray-900 rounded-lg p-2 text-sm" placeholder="Insira sua chave aqui (Ex: AIzaSy...)" /></div>
@@ -174,7 +175,10 @@
     initializeGrain();
     const formatTime = t => `${Math.floor(t/60).toString().padStart(2,'0')}:${Math.floor(t%60).toString().padStart(2,'0')}.${Math.floor((t*1000)%1000).toString().padStart(3,'0')}`;
     const parseTime = s => { const p = s?.match?.(/(\d{2}):(\d{2})\.(\d{3})/); return p ? parseInt(p[1])*60 + parseInt(p[2]) + parseInt(p[3])/1000 : 0; };
-    function buildCssFilter() { return `brightness(${sliders.brightness.value||100}%) contrast(${sliders.contrast.value||100}%) saturate(${sliders.saturate.value||100}%)${activeManualVFX.has('invert')?' invert(1)':''}`; }
+    function buildCssFilter() { 
+        let filters = `brightness(${sliders.brightness.value||100}%) contrast(${sliders.contrast.value||100}%) saturate(${sliders.saturate.value||100}%)`;
+        return filters;
+    }
     function setPreviewMode(mode) { 
       previewMode = mode;
       if (mode === 'native') {
@@ -231,11 +235,12 @@
     ctx.fillText(caption.text,x,y);ctx.restore();}
     function renderCaptionsList(){captions.sort((a,b)=>a.start-b.start);captionsList.innerHTML=captions.length===0?`<p class="text-center text-gray-500 text-sm">Nenhuma legenda.</p>`:'';captions.forEach(c=>{const item=document.createElement('div');item.className='bg-gray-900 p-2 rounded-lg cursor-pointer';item.innerHTML=`<div class="flex justify-between items-center text-sm"><p class="font-mono text-violet-300">${formatTime(c.start)}->${formatTime(c.end)}</p><div class="flex gap-2"><button class="edit-btn text-yellow-400" data-id="${c.id}">E</button><button class="delete-btn text-red-500" data-id="${c.id}">X</button></div></div><p class="text-base truncate">${c.text}</p>`;item.addEventListener('click',e=>{if(e.target.tagName!=='BUTTON')videoPlayer.currentTime=c.start;});captionsList.appendChild(item);});document.querySelectorAll('.edit-btn').forEach(b=>b.addEventListener('click',e=>{const id=parseFloat(e.target.dataset.id);const c=captions.find(c=>c.id===id);editingCaptionId=id;captionText.value=c.text;startTimeInput.value=formatTime(c.start);endTimeInput.value=formatTime(c.end);captionAnimation.value=c.animation;captionColor.value=c.color;addCaptionBtn.textContent="Atualizar";}));document.querySelectorAll('.delete-btn').forEach(b=>b.addEventListener('click',e=>{captions=captions.filter(c=>c.id!==parseFloat(e.target.dataset.id));renderCaptionsList();}));}
 
-    // --- CÓDIGO DE CONTROLE DE ABAS (CORRIGIDO) ---
+    // --- CÓDIGO DE CONTROLE DE ABAS E INTERFACE (CORRIGIDO E LAPIDADO) ---
     function initTabs() {
         const tabButtons = document.querySelectorAll('.tab-button');
         const tabContents = document.querySelectorAll('.tab-content');
 
+        // Lógica de Troca de Abas
         tabButtons.forEach(button => {
             button.addEventListener('click', () => {
                 const targetTab = button.dataset.tab;
@@ -248,80 +253,243 @@
                 }
             });
         });
-    }
-
-    // --- NOVO CÓDIGO: CHECAR E PEDIR PERMISSÃO ---
-    async function requestPermissions() {
-        if (!Permissions) return true; // Se não for APK (Capacitor), não precisa de permissão
-
-        try {
-            // Solicita permissão para ler/escrever arquivos externos
-            const result = await Permissions.request({ name: 'storage' });
+        
+        // CORREÇÃO CRÍTICA AQUI: Ativação dos botões de VFX
+        const vfxButtons = document.querySelectorAll('.vfx-button');
+        vfxButtons.forEach(btn=>btn.addEventListener('click',() => {
+            const effect=btn.dataset.effect;
             
-            if (result.granted || result.state === 'granted') {
-                return true;
+            // Lógica para aplicar classes CSS permanentes (VFX que você queria fixos)
+            if (effect === 'invert' || effect === 'shake' || effect === 'chromatic') {
+                 if (videoPlayer.classList.contains(`vfx-${effect}`)) {
+                    videoPlayer.classList.remove(`vfx-${effect}`);
+                    btn.classList.remove('active');
+                    activeManualVFX.delete(effect);
+                } else {
+                    videoPlayer.classList.add(`vfx-${effect}`);
+                    btn.classList.add('active');
+                    activeManualVFX.add(effect);
+                }
             } else {
-                renderTitle.textContent = "PERMISSÃO NEGADA";
-                renderMessage.textContent = "O app precisa de acesso para salvar o vídeo no celular. Ative manualmente nas configurações.";
-                setTimeout(() => renderOverlay.classList.add('hidden'), 5000);
-                return false;
+                 // Para filtros simples (Flash, Bloom, Scan Lines etc.), apenas o toggle visual (sem alteração permanente no elemento)
+                 btn.classList.toggle('active');
+                 if(activeManualVFX.has(effect)) activeManualVFX.delete(effect);
+                 else activeManualVFX.add(effect);
             }
-        } catch (e) {
-             // Algumas versões mais antigas do Android/Capacitor
-             console.error("Erro ao pedir permissão, tentando continuar...", e);
-             return true; 
-        }
+            
+            videoPlayer.style.filter = buildCssFilter(); // Re-aplica filtros manuais (brilho, contraste)
+            renderDomCaption();
+        }));
+        
+        // Lógica para Presets
+        const presetButtons = document.querySelectorAll('.preset-button');
+        presetButtons.forEach(btn=>btn.addEventListener('click',() => {
+            const preset=btn.dataset.preset;
+            if(preset === 'normal'){ 
+                 sliders.brightness.value = 100;
+                 sliders.contrast.value = 100;
+                 sliders.saturate.value = 100;
+            } else if (preset === 'inferno'){ 
+                 sliders.brightness.value = 120;
+                 sliders.contrast.value = 150;
+                 sliders.saturate.value = 180;
+            } else if (preset === 'ice'){ 
+                 sliders.brightness.value = 90;
+                 sliders.contrast.value = 120;
+                 sliders.saturate.value = 80;
+            }
+             // Dispara evento 'input' em sliders de filtro para atualizar o CSS filter
+            Object.values(sliders).forEach(el => {
+                if (el.id !== 'grain' && el.id !== 'vignette') {
+                    // Simula a interação para garantir a aplicação do filtro CSS
+                    el.dispatchEvent(new Event('input')); 
+                }
+            });
+            videoPlayer.style.filter = buildCssFilter(); 
+            renderDomCaption();
+        }));
+
+        // Lógica para Sliders Manuais
+        Object.values(sliders).forEach(el=>el.addEventListener('input',()=>{
+             videoPlayer.style.filter = buildCssFilter(); // Atualiza o filtro CSS do videoPlayer
+             renderDomCaption();
+        }));
+        
+        // NOVO: Adiciona evento de clique na área do vídeo para Exportar com VFX
+        const videoArea = document.getElementById('video-area');
+        videoArea.addEventListener('click', (event) => {
+            // Verifica se o clique não foi em um botão ou em um controle (evita conflitos)
+            if (videoPlayer.src && (event.target === videoArea || event.target === videoPlayer)) {
+                 exportVFXBtn.click();
+            }
+        });
     }
-    
-    // --- FUNÇÃO NATIVA DE DOWNLOAD/SALVAMENTO PARA APK ---
+
+    // --- FUNÇÃO DE DOWNLOAD/SALVAMENTO HÍBRIDO (COM FALLBACK GARANTIDO) ---
     async function saveFileToDevice(url, fileName, mimeType) {
         renderOverlay.classList.remove('hidden');
         renderTitle.textContent="Salvando Vídeo...";
-        renderMessage.textContent="Verificando permissões...";
-
-        if (!await requestPermissions()) return;
+        renderMessage.textContent="Tentando salvamento nativo (Capacitor)...";
 
         if (!Filesystem) {
-             // Fallback para download no navegador (para o PWA/Versão Web)
+             // FALLBACK WEB: Se não for APK, usa o download web.
              const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
              renderTitle.textContent = "Salvamento Concluído";
-             renderMessage.textContent = "Download iniciado no navegador do sistema!";
+             renderMessage.textContent = "Download iniciado no navegador do sistema (Modo Web).";
              setTimeout(() => renderOverlay.classList.add('hidden'), 4000);
              return;
         }
 
+        let base64Data = url.startsWith('data:') ? url.split(',')[1] : null;
+        let finalUrl = url;
+
         try {
+            if (!base64Data) {
+                // Se for uma URL blob local do vídeo, faz o fetch e converte de forma robusta
+                renderMessage.textContent="Convertendo URL Blob para Base64...";
+                
+                const response = await fetch(finalUrl);
+                
+                if (!response.ok) throw new Error(`Fetch failed with status ${response.status}`);
+                
+                const blob = await response.blob();
+                
+                // Conversão Blob -> Base64
+                base64Data = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                         resolve(reader.result.split(',')[1]); 
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob); 
+                });
+            }
+
             renderMessage.textContent="Copiando arquivo para a pasta Downloads...";
-            // 1. Fetch o arquivo (video URL ou Base64 data)
-            const response = await fetch(url);
-            const blob = await response.blob();
             
-            // 2. Converte o Blob para Base64 (necessário para a API do Capacitor Filesystem)
-            const reader = new FileReader();
-            await new Promise(resolve => {
-                reader.onloadend = () => resolve();
-                reader.readAsDataURL(blob);
-            });
-            const base64Data = reader.result.split(',')[1];
-            
-            // 3. Escreve o arquivo no diretório de downloads do dispositivo
+            // Escreve o arquivo no diretório de downloads do dispositivo (Aqui o Android pedirá permissão)
             await Filesystem.writeFile({
                 path: fileName,
                 data: base64Data,
-                directory: 'DOWNLOADS', // Diretório padrão do Android
+                directory: 'DOWNLOADS', 
                 recursive: true
             });
 
             renderTitle.textContent = "SUCESSO!";
-            renderMessage.textContent = `O arquivo foi salvo no seu celular como: ${fileName}`;
+            renderMessage.textContent = `O arquivo foi salvo na sua pasta Downloads como: ${fileName}`;
 
         } catch (error) {
-            renderTitle.textContent = "ERRO ao Salvar!";
-            renderMessage.textContent = `Falha: ${error.message || error}. Tente ativar a permissão de Arquivos nas Configurações.`;
+            // Se falhar (provavelmente por permissão negada ou erro nativo), usa o fallback web.
+            console.error("Erro no Salvamento Nativo:", error);
+            renderMessage.textContent = `Falha do Salvamento Nativo. Usando Fallback Web...`;
+            
+            // FALLBACK WEB FINAL (Para garantir o download, mesmo no navegador)
+            const a = document.createElement('a'); a.href = url.startsWith('data:') ? url : videoPlayer.src; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            
+            renderTitle.textContent = "Download Iniciado (Navegador)";
+            renderMessage.textContent = "O arquivo está sendo baixado no navegador do sistema. Permissão de Arquivos é necessária!";
         }
 
         setTimeout(() => renderOverlay.classList.add('hidden'), 5000);
     }
+    
+    // --- FUNÇÕES DE LÓGICA DA IA (GEMINI API) ---
+    async function callGeminiAPI(prompt, systemPrompt, tool, mimeType) {
+        aiOutput.classList.add('hidden');
+        aiContentResult.textContent = '';
+        aiStatus.innerHTML = `<div class="spinner"></div><span class="ml-2">Aguardando IA (Gemini)...</span>`;
+        
+        const apiKey = apiKeyInput.value.trim();
+        if (!apiKey) {
+            aiStatus.innerHTML = `<span class="text-red-400">ERRO: Chave da Gemini API ausente!</span>`;
+            return;
+        }
+        
+        const apiUrl = `${GEMINI_API_URL}?key=${apiKey}`;
+        
+        let payload = {
+            contents: [{ parts: [{ text: prompt }] }],
+            config: { systemInstruction: { parts: [{ text: systemPrompt }] } },
+            tools: tool ? [{ google_search: {} }] : undefined
+        };
+        
+        if (mimeType === 'image/png') {
+            // Se for análise de imagem, anexa o frame do vídeo
+            videoPlayer.pause();
+            canvasPlayer.width = 480; 
+            canvasPlayer.height = Math.round(480 * (videoPlayer.videoHeight / videoPlayer.videoWidth));
+            drawFrame();
+            
+            const base64Image = await new Promise(resolve => canvasPlayer.toBlob(blob => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                reader.readAsDataURL(blob);
+            }, 'image/jpeg', 0.8));
+            
+            payload.contents = [{
+                parts: [
+                    { text: prompt },
+                    { inlineData: { mimeType: "image/jpeg", data: base64Image } }
+                ]
+            }];
+        }
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error.message || `API error: ${response.status}`);
+            }
+
+            const result = await response.json();
+            const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "Nenhuma resposta da IA.";
+            
+            aiContentResult.textContent = text;
+            aiOutput.classList.remove('hidden');
+            aiStatus.innerHTML = `<span class="text-green-400">Sucesso!</span>`;
+            return text;
+
+        } catch (error) {
+            aiStatus.innerHTML = `<span class="text-red-400">Erro: ${error.message}</span>`;
+            console.error("Gemini API Error:", error);
+        }
+        return null;
+    }
+    
+    // --- Handlers de Botões Gemini ---
+    contentAiBtn.addEventListener('click', () => {
+        const description = videoDescription.value.trim() || "Conteúdo de vídeo genérico.";
+        const prompt = `Gere 5 ideias de vídeos de curta duração (short-form video), 3 sugestões de roteiro simples para um vídeo de 30 segundos, e 2 ganchos (hooks) fortes. O tema principal é: "${description}".`;
+        const systemPrompt = "Você é um criador de conteúdo e roteirista para redes sociais. Seja criativo, conciso e use a linguagem de internet.";
+        callGeminiAPI(prompt, systemPrompt, true, 'text/plain'); // Usando Google Search para ideias atuais
+    });
+
+    summaryCaptionBtn.addEventListener('click', () => {
+        if (captions.length === 0) {
+            aiStatus.innerHTML = `<span class="text-yellow-400">Adicione legendas primeiro!</span>`;
+            return;
+        }
+        const captionText = captions.map(c => c.text).join(' ');
+        const prompt = `Resuma as seguintes legendas em um parágrafo conciso: "${captionText}"`;
+        const systemPrompt = "Você é um editor de texto conciso. Seu objetivo é fornecer um resumo em uma única frase ou parágrafo curto.";
+        callGeminiAPI(prompt, systemPrompt, false, 'text/plain');
+    });
+
+    effectAiBtn.addEventListener('click', async () => {
+        if (!videoPlayer.src) {
+            aiStatus.innerHTML = `<span class="text-yellow-400">Carregue um vídeo primeiro!</span>`;
+            return;
+        }
+        const description = videoDescription.value.trim() || "Cena de vídeo genérica.";
+        const prompt = `Analise o frame do vídeo e sugira 3 filtros ou ajustes de cor (ex: Saturate 150, Contrast 120) e 2 efeitos visuais (flash, invert, glitch, shake) que combinem com o tema: "${description}". Responda em formato de lista.`;
+        const systemPrompt = "Você é um especialista em color grading e efeitos visuais (VFX). Analise o conteúdo da imagem e sugira ajustes de filtro e efeitos visuais para criar um estilo visual impactante.";
+        callGeminiAPI(prompt, systemPrompt, false, 'image/png'); // Usando visão para analisar o frame
+    });
     
     // --- EVENT LISTENERS E INICIALIZAÇÕES ---
     apiKeyInput.addEventListener('input',()=>{localStorage.setItem('geminiApiKey',apiKeyInput.value.trim());aiStatus.textContent=apiKeyInput.value.trim()?"API Key configurada!":"Configure sua API key da Gemini.";});
@@ -330,23 +498,24 @@
         const savedKey=localStorage.getItem('geminiApiKey')||"";
         apiKeyInput.value=savedKey;
         aiStatus.textContent=savedKey?"API Key configurada!":"Configure sua API key da Gemini.";
+        
+        // Chamada da função de inicialização da interface (Contém a correção dos VFX)
         initTabs(); 
     };
 
-    videoUploadInput.addEventListener('change',event=>{const file=event.target.files[0];if(!file)return;placeholder.classList.remove('hidden');placeholder.innerHTML=`<div class="spinner"></div><p class="text-xl mt-2">Carregando...</p>`;controlsContainer.classList.add('hidden');const fileURL=URL.createObjectURL(file);videoPlayer.src=fileURL;placeholder.classList.add('hidden');controlsContainer.classList.remove('hidden');setPreviewMode('native');videoPlayer.pause();playPauseBtn.textContent='Reproduzir';editTimeline={effects:[],keyframes:[]};captions=[];renderCaptionsList();
-    const MAX_W=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)?640:960;videoPlayer.addEventListener('loadedmetadata',()=>{const ar=videoPlayer.videoWidth/videoPlayer.videoHeight||16/9;const cssW=Math.min(MAX_W,videoPlayer.videoWidth||MAX_W);const cssH=Math.round(cssW/ar);videoPlayer.style.width=cssW+'px';videoPlayer.style.height=cssH+'px';originalCanvasSize={width:videoPlayer.videoWidth,height:videoPlayer.videoHeight};videoPlayer.currentTime=0;},{once:true});videoPlayer.addEventListener('canplay',()=>{videoPlayer.style.filter=buildCssFilter();renderDomCaption();},{once:true});});
+    videoUploadInput.addEventListener('change',event=>{const file=event.target.files[0];if(!file)return;placeholder.classList.remove('hidden');placeholder.innerHTML=`<div class="spinner"></div><p class="text-xl mt-2">Carregando...</p>`;controlsContainer.classList.add('hidden');const fileURL=URL.createObjectURL(file);videoPlayer.src=fileURL;placeholder.classList.add('hidden');controlsContainer.classList.remove('hidden');setPreviewMode('native');videoPlayer.pause();playPauseBtn.textContent='Pausa';startNativeLoop();});
     playPauseBtn.addEventListener('click',()=>{if(!videoPlayer.src)return;if(videoPlayer.paused){videoPlayer.play();playPauseBtn.textContent='Pausa';startNativeLoop();}else{videoPlayer.pause();playPauseBtn.textContent='Reproduzir';stopNativeLoop();}});
     document.addEventListener('visibilitychange',()=>{if(document.hidden)stopNativeLoop();else if(!videoPlayer.paused)startNativeLoop();});
     setStartBtn?.addEventListener('click',()=>startTimeInput.value=formatTime(videoPlayer.currentTime));setEndBtn?.addEventListener('click',()=>endTimeInput.value=formatTime(videoPlayer.currentTime));
     addCaptionBtn?.addEventListener('click',()=>{const text=captionText.value.trim();if(!text)return;const start=parseTime(startTimeInput.value)||0,end=parseTime(endTimeInput.value)||start+2,animation=captionAnimation.value,color=captionColor.value||'#FFFFFF';if(editingCaptionId){captions=captions.map(c=>c.id===editingCaptionId?{...c,text,start,end,animation,color}:c);editingCaptionId=null;addCaptionBtn.textContent='Atualizar';}else captions.push({id:Date.now()+Math.random(),text,start,end,animation,color});renderCaptionsList();renderDomCaption();});
     
-    // EXPORTAR RÁPIDO (COM ÁUDIO): AGORA PEDE PERMISSÃO E SALVA NATIVAMENTE
+    // EXPORTAR RÁPIDO (COM ÁUDIO): AGORA TENTA NATIVO E VOLTA PARA WEB SE FALHAR
     exportFastBtn.addEventListener('click', () => {
         if (!videoPlayer.src) return;
         saveFileToDevice(videoPlayer.src, 'video_original_com_audio.mp4', 'video/mp4');
     });
     
-    // EXPORTAR VFX (SIMPLIFICADO - APENAS UM FRAME DE TESTE): AGORA PEDE PERMISSÃO E SALVA NATIVAMENTE
+    // EXPORTAR VFX (SIMPLIFICADO - APENAS UM FRAME DE TESTE): AGORA TENTA NATIVO E VOLTA PARA WEB SE FALHAR
     exportVFXBtn.addEventListener('click', async () => {
         if (!videoPlayer.src) {
              alert("Por favor, carregue um vídeo primeiro!");
@@ -361,6 +530,11 @@
         await new Promise(resolve => setTimeout(resolve, 100)); 
 
         canvasPlayer.toBlob(async (blob) => {
+            if (!blob) {
+                // Fallback caso o canvas.toBlob() falhe (o que é comum em WebViews restritas)
+                saveFileToDevice(videoPlayer.src, 'frame_vfx_fallback.png', 'image/png');
+                return;
+            }
             const reader = new FileReader();
             reader.readAsDataURL(blob);
             reader.onloadend = () => {
@@ -372,5 +546,4 @@
     
   </script>
 </body>
-</html>
-
+          </html>

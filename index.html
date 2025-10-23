@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Editor de Vídeo Monstro 6.0 (Web Pura)</title>
+  <title>Editor de Vídeo Monstro 5.2 (Definitivo)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     // Código da biblioteca Whammy removido
@@ -12,7 +12,9 @@
         alert("Erro: A função de renderização de vídeo foi desativada por incompatibilidade de GPU. Use 'Exportar Rápido'."); 
     }};;
     
-    // REMOVEMOS: Filesystem e Permissions (Dependiam de plugins nativos)
+    // Capacitor JS Bridge
+    // Removemos o plugin Permissions que deu erro 404.
+    const { Filesystem } = window.Capacitor ? window.Capacitor.Plugins : { Filesystem: null };
     const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent";
     const GEMINI_API_KEY = ""; 
 
@@ -44,8 +46,8 @@
 <body class="bg-gray-900 text-white flex flex-col min-h-screen">
   <header class="bg-gray-800 shadow-lg z-20">
     <div class="container mx-auto px-4 py-4">
-      <h1 class="text-xl font-bold text-center text-violet-400">Editor de Vídeo Monstro 6.0 (Web Pura)</h1>
-      <p class="text-center text-gray-400 mt-1 text-sm">Estabilidade Máxima (Sem Plugins Nativos)</p>
+      <h1 class="text-xl font-bold text-center text-violet-400">Editor de Vídeo Monstro 5.2 (Definitivo)</h1>
+      <p class="text-center text-gray-400 mt-1 text-sm">Pronto para o Build Final</p>
     </div>
   </header>
   <main class="flex-grow container mx-auto p-2 flex flex-col">
@@ -166,8 +168,6 @@
 
     // --- FUNÇÕES CORE (START) ---
 
-    // REMOVIDO: requestStoragePermission() (Não funciona sem plugin)
-
     function initializeGrain() {
       grainCanvas.width = 128; grainCtx.height = 128;
       const imageData = grainCtx.createImageData(128, 128);
@@ -200,7 +200,7 @@
     }
 
     window.onload = () => {
-        // 1. SEM SOLICITAÇÃO NATIVA. APENAS INICIALIZAÇÃO
+        // PERMISSÃO DE ARQUIVO SERÁ TRATADA PELO ANDROID MANIFEST, JÁ QUE O PLUGIN QUEBROU.
         initializeGrain();
         const savedKey=localStorage.getItem('geminiApiKey')||"";
         apiKeyInput.value=savedKey;
@@ -400,31 +400,81 @@
     exportNativeBtn.addEventListener('click', () => {
         renderOverlay.classList.remove('hidden');
         renderTitle.textContent = "Exportação NATIVA (FFmpeg)";
-        renderMessage.textContent = "PROCESSAMENTO NATIVO SIMULADO...";
+        renderMessage.textContent = "Processamento NATIVO simulado... Requer plugin FFmpeg instalado no projeto Android para funcionar de verdade!";
 
         setTimeout(() => {
             renderTitle.textContent = "Simulação Concluída";
-            renderMessage.textContent = "Usando método web para download (sem código nativo instalado).";
-            // Usa o FALLBACK WEB (a função saveFileToDevice agora é 100% FALLBACK)
+            renderMessage.textContent = "O APK real precisaria de código nativo para essa função, mas vamos salvar o original.";
+            // Simula um download do fallback (o vídeo original) após a simulação
             saveFileToDevice(videoPlayer.src, 'video_processado_simulado_final.mp4', 'video/mp4');
         }, 4000);
     });
 
-    // --- FUNÇÃO DE DOWNLOAD/SALVAMENTO (100% FALLBACK WEB) ---
+    // --- FUNÇÃO DE DOWNLOAD/SALVAMENTO HÍBRIDO (COM FALLBACK GARANTIDO) ---
     async function saveFileToDevice(url, fileName, mimeType) {
-        // 100% FALLBACK WEB: Não tenta mais usar Filesystem (que depende de plugin)
         renderOverlay.classList.remove('hidden');
         renderTitle.textContent="Salvando Vídeo...";
-        renderMessage.textContent="Download iniciado no navegador do sistema (Modo Web).";
+        renderMessage.textContent="Tentando salvamento nativo (Capacitor)...";
 
-        const a = document.createElement('a'); 
-        a.href = url.startsWith('data:') ? url : videoPlayer.src; 
-        a.download = fileName; 
-        document.body.appendChild(a); 
-        a.click(); 
-        document.body.removeChild(a);
-        
-        renderTitle.textContent = "Download Iniciado";
+        if (!Filesystem) {
+             // FALLBACK WEB: Se não for APK, usa o download web.
+             const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+             renderTitle.textContent = "Salvamento Concluído";
+             renderMessage.textContent = "Download iniciado no navegador do sistema (Modo Web).";
+             setTimeout(() => renderOverlay.classList.add('hidden'), 4000);
+             return;
+        }
+
+        let base64Data = url.startsWith('data:') ? url.split(',')[1] : null;
+        let finalUrl = url;
+
+        try {
+            if (!base64Data) {
+                // Se for uma URL blob local do vídeo, faz o fetch e converte de forma robusta
+                renderMessage.textContent="Convertendo URL Blob para Base64...";
+                
+                const response = await fetch(finalUrl);
+                
+                if (!response.ok) throw new Error(`Fetch failed with status ${response.status}`);
+                
+                const blob = await response.blob();
+                
+                // Conversão Blob -> Base64
+                base64Data = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                         resolve(reader.result.split(',')[1]); 
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob); 
+                });
+            }
+
+            renderMessage.textContent="Copiando arquivo para a pasta Downloads...";
+            
+            // Escreve o arquivo no diretório de downloads do dispositivo (Aqui o Android pedirá permissão)
+            await Filesystem.writeFile({
+                path: fileName,
+                data: base64Data,
+                directory: 'DOWNLOADS', 
+                recursive: true
+            });
+
+            renderTitle.textContent = "SUCESSO!";
+            renderMessage.textContent = `O arquivo foi salvo na sua pasta Downloads como: ${fileName}`;
+
+        } catch (error) {
+            // Se falhar (provavelmente por permissão negada ou erro nativo), usa o fallback web.
+            console.error("Erro no Salvamento Nativo:", error);
+            renderMessage.textContent = `Falha do Salvamento Nativo. Usando Fallback Web...`;
+            
+            // FALLBACK WEB FINAL (Para garantir o download, mesmo no navegador)
+            const a = document.createElement('a'); a.href = url.startsWith('data:') ? url : videoPlayer.src; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            
+            renderTitle.textContent = "Download Iniciado (Navegador)";
+            renderMessage.textContent = "O arquivo está sendo baixado no navegador do sistema. Permissão de Arquivos é necessária!";
+        }
+
         setTimeout(() => renderOverlay.classList.add('hidden'), 5000);
     }
     
@@ -552,8 +602,12 @@
                 saveFileToDevice(videoPlayer.src, 'frame_vfx_fallback.png', 'image/png');
                 return;
             }
-            // Usa o fallback web direto para salvar o frame
-            saveFileToDevice(blob, 'frame_com_vfx_teste.png', 'image/png');
+            const reader = new FileReader();
+            reader.readAsDataURL(blob);
+            reader.onloadend = () => {
+                const base64data = reader.result;
+                saveFileToDevice(base64data, 'frame_com_vfx_teste.png', 'image/png');
+            };
         }, 'image/png');
     });
 

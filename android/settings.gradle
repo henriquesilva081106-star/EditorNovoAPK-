@@ -1,0 +1,7 @@
+// Este arquivo garante que o Gradle inclua os módulos corretos.
+
+include ':capacitor-android'
+project(':capacitor-android').projectDir = new File('node_modules/@capacitor/android/capacitor')
+
+include ':app'
+// OUTRAS LINHAS DE PLUGINS QUEBRADOS (COMO O FFmpeg) FORAM REMOVIDAS

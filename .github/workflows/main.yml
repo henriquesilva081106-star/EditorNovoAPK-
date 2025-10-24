@@ -28,18 +28,18 @@ jobs:
       - name: Build Web Assets (Cria a pasta www)
         run: npm run build
 
-      # === CORREÇÃO 1: REMOÇÃO DE ARTEFATO (Resolve "platform already exists") ===
+      # === CORREÇÃO 1: REMOÇÃO DE ARTEFATO ===
       - name: Remover Artefato Antigo (Limpeza)
         run: rm -rf android/
 
       - name: Add Android Platform
         run: npx cap add android
 
-      # === CORREÇÃO 2: CÓPIA MANUAL DO JAR FFmpeg (SOLUÇÃO FINAL) ===
-      # Esta etapa procura o arquivo JAR correto em qualquer lugar no diretório do plugin e o copia.
-      - name: Copiar FFmpeg JAR (Busca Automática)
+      # === CORREÇÃO 2: CÓPIA MANUAL DO JAR FFmpeg (CORREÇÃO DE CAMINHO) ===
+      # Corrigimos o nome da pasta no node_modules.
+      - name: Copiar FFmpeg JAR (Busca Automática - CORRIGIDA)
         run: |
-          JAR_FILE=$(find node_modules/himeka-capacitor-ffmpeg-kit -name "ffmpeg-kit-full-6.0-2.LTS.jar" -print -quit)
+          JAR_FILE=$(find node_modules/capacitor-ffmpeg-kit -name "ffmpeg-kit-full-6.0-2.LTS.jar" -print -quit)
           if [ -f "$JAR_FILE" ]; then
             mkdir -p android/app/libs/
             cp "$JAR_FILE" android/app/libs/

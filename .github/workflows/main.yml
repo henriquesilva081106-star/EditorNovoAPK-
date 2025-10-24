@@ -15,7 +15,6 @@ jobs:
         with:
           node-version: '20'
 
-      # Voltando para o Java 21, conforme sua preferência
       - name: Set up Java 21
         uses: actions/setup-java@v4
         with:
@@ -23,22 +22,27 @@ jobs:
           java-version: '21' 
 
       - name: Install dependencies (FORÇANDO instalação do FFmpeg)
-        # CORREÇÃO CRÍTICA: Adicionar --force para resolver conflito de dependências do FFmpeg
         run: npm install --force
 
       - name: Build Web Assets (Cria a pasta www)
         run: npm run build
         
-      # === CORREÇÃO 1: Limpeza da pasta Android (Para o erro anterior) ===
+      # === CORREÇÃO 1: Limpeza (Mantida) ===
       - name: Remover Artefato Antigo (Limpeza)
         run: rm -rf android/
-
+        
+      # === CORREÇÃO 2: Garantir que o Capacitor vê a pasta 'www' ===
+      # Garante que o ficheiro 'capacitor.config.json' aponta para a pasta correta (www).
+      - name: Configurar Diretório Web do Capacitor
+        run: npx cap sync
+        # O comando 'npx cap sync' por si só pode falhar, mas usaremos a sincronização
+        # de metadados antes de adicionar a plataforma Android para garantir que as configurações estão OK.
+        
       - name: Add Android Platform
         run: npx cap add android
 
-      # === CORREÇÃO 2: Sincronização Forçada do Capacitor (Para o erro FFmpeg) ===
-      # Garante que os ficheiros .jar necessários, como o do FFmpeg, 
-      # são copiados para a pasta 'android' antes do build.
+      # === CORREÇÃO 3: Sincronização Final do Capacitor ===
+      # A sincronização é feita aqui, após a plataforma ser adicionada.
       - name: Initialize Capacitor and Sync
         run: npx cap sync android --json
 

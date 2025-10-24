@@ -22,9 +22,9 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      # Instala as dependências gerais do seu projeto (sem o plugin quebrado)
+      # Instalação final e forte
       - name: Install dependencies (FORÇANDO instalação geral)
-        run: npm install --force
+        run: npm install --force --legacy-peer-deps
 
       - name: Build Web Assets (Cria a pasta www)
         run: npm run build
@@ -35,7 +35,6 @@ jobs:
       - name: Add Android Platform
         run: npx cap add android
 
-      # Estes passos são mantidos para garantir a sincronização do ambiente
       - name: Forçar Cópia de Assets do Capacitor
         run: npx cap copy android
 

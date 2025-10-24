@@ -27,7 +27,12 @@ jobs:
 
       - name: Build Web Assets (Cria a pasta www)
         run: npm run build
-
+        
+      # === CORREÇÃO CRÍTICA DO ERRO ===
+      # Esta etapa remove a pasta 'android/' para que 'npx cap add android' possa ser executado
+      - name: Remover Artefato Antigo (Limpeza)
+        run: rm -rf android/
+      
       - name: Add Android Platform
         run: npx cap add android
 

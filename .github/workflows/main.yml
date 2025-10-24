@@ -21,8 +21,9 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install dependencies (FORÇANDO instalação do FFmpeg)
+        # CORREÇÃO CRÍTICA: Adicionar --force para resolver conflito de dependências do FFmpeg
+        run: npm install --force
 
       - name: Build Web Assets (Cria a pasta www)
         run: npm run build
@@ -45,3 +46,4 @@ jobs:
         with:
           name: app-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
+

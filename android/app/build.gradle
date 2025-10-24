@@ -1,13 +1,15 @@
+// Este arquivo é essencial. Ele configura a aplicação Android.
+
 apply plugin: 'com.android.application'
 apply plugin: 'androidx.navigation.safeargs'
 
 android {
     namespace "com.example.app" // Ajuste este namespace se necessário
-    compileSdkVersion 34 // Use o SDK mais recente (ou 33/34)
+    compileSdkVersion 34 
     defaultConfig {
         applicationId "com.example.app" // Ajuste o ID da sua aplicação
         minSdkVersion 22
-        targetSdkVersion 34 // Deve ser igual ao compileSdkVersion
+        targetSdkVersion 34 
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -19,10 +21,24 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17 // Garante compatibilidade com Java 17/21
+        sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
 }
 
+// O bloco dependencies deve estar fora do bloco 'android'.
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
+
+    // CORREÇÃO FFmpeg: Força o Gradle a encontrar o plugin que estava falhando.
+    implementation "com.github.himeka.capacitor:capacitor-ffmpeg-kit:1.0.0" 
+
+    // Dependências de núcleo do Android/Capacitor
+    implementation "androidx.core:core-ktx:1.9.0"
+    implementation "com.getcapacitor:capacitor-android:5.0.0" 
+
+    // Dependências de teste
+    testImplementation "junit:junit:4.13.2"
+    androidTestImplementation "androidx.test.ext:junit:1.1.5"
+    androidTestImplementation "androidx.test.espresso:espresso-core:3.5.1"
+}

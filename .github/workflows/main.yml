@@ -22,7 +22,7 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      # Instalação final e forte (Para instalar o novo FFmpeg)
+      # Instalação final e forte
       - name: Install dependencies (FORÇANDO instalação geral)
         run: npm install --force --legacy-peer-deps
 

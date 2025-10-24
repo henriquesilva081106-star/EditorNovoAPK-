@@ -1,4 +1,4 @@
-
+# Linha em branco de segurança
 name: Build Android Debug APK
 
 on:
@@ -29,16 +29,14 @@ jobs:
       - name: Build Web Assets (Cria a pasta www)
         run: npm run build
 
-      # === CORREÇÃO 1: REMOÇÃO DE ARTEFATO ===
-      # Esta etapa remove a pasta 'android/' para resolver o erro "platform already exists."
+      # === CORREÇÃO 1: REMOÇÃO DE ARTEFATO (Resolve "platform already exists") ===
       - name: Remover Artefato Antigo (Limpeza)
         run: rm -rf android/
 
       - name: Add Android Platform
         run: npx cap add android
 
-      # === CORREÇÃO 2: COPIAR ASSETS DE PLUGINS (FIX FFmpeg) ===
-      # Esta etapa força a cópia de todos os arquivos de plugins (como o FFmpeg-Kit) para o local do Android.
+      # === CORREÇÃO 2: COPIAR ASSETS DE PLUGINS (Força a cópia de arquivos como FFmpeg) ===
       - name: Forçar Cópia de Assets do Capacitor
         run: npx cap copy android
 
@@ -46,7 +44,6 @@ jobs:
         run: npx cap sync android
 
       # === CORREÇÃO 3: LIMPEZA AGRESSIVA DO GRADLE ===
-      # Limpa o cache para evitar que o Gradle use informações desatualizadas do FFmpeg.
       - name: Limpar Cache do Gradle
         run: rm -rf ~/.gradle/caches/
 
@@ -54,7 +51,6 @@ jobs:
         run: chmod +x android/gradlew
 
       # === CORREÇÃO 4: FORÇAR A REEXECUÇÃO DA BUILD ===
-      # O flag --rerun-tasks força o Gradle a reexecutar todas as tarefas de plugin.
       - name: Build Android Debug APK
         run: ./gradlew assembleDebug --rerun-tasks
         working-directory: ./android

@@ -35,12 +35,19 @@ jobs:
       - name: Add Android Platform
         run: npx cap add android
 
-      # === CORREÇÃO 2: CÓPIA MANUAL DO JAR FFmpeg (Última tentativa de resolver o erro) ===
-      # Esta é a solução mais agressiva: copiar o JAR do node_modules para o local correto.
-      - name: Copiar FFmpeg JAR manualmente
+      # === CORREÇÃO 2: CÓPIA MANUAL DO JAR FFmpeg (SOLUÇÃO FINAL) ===
+      # Esta etapa procura o arquivo JAR correto em qualquer lugar no diretório do plugin e o copia.
+      - name: Copiar FFmpeg JAR (Busca Automática)
         run: |
-          mkdir -p android/app/libs/
-          cp node_modules/himeka-capacitor-ffmpeg-kit/android/libs/ffmpeg-kit-full-6.0-2.LTS.jar android/app/libs/
+          JAR_FILE=$(find node_modules/himeka-capacitor-ffmpeg-kit -name "ffmpeg-kit-full-6.0-2.LTS.jar" -print -quit)
+          if [ -f "$JAR_FILE" ]; then
+            mkdir -p android/app/libs/
+            cp "$JAR_FILE" android/app/libs/
+            echo "Cópia bem-sucedida de $JAR_FILE"
+          else
+            echo "ERRO CRÍTICO: Não foi possível localizar o arquivo JAR do FFmpeg."
+            exit 1 # Força a falha da build se o arquivo não for encontrado.
+          fi
 
       - name: Forçar Cópia de Assets do Capacitor
         run: npx cap copy android

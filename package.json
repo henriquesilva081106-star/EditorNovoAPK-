@@ -29,6 +29,6 @@
   "dependencies": {
     "@capacitor/android": "^7.4.4",
     "@capacitor/core": "^7.4.4",
-    "@ffmpeg-kit/core": "^5.1.0" // CORRIGIDO: Usando o módulo core que o NPM reconhece
+    "@ffmpeg-kit/core": "^5.1.0"
   }
 }

@@ -22,7 +22,15 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Install dependencies (FORÇANDO instalação do FFmpeg)
+      # === NOVA ETAPA: REINSTALAR PLUGIN FFmpeg ===
+      # Garante que o plugin (e o JAR) sejam baixados corretamente.
+      - name: Reinstalar FFmpeg-Kit (Garantia de Download)
+        run: |
+          npm uninstall himeka-capacitor-ffmpeg-kit || true
+          npm cache clean --force
+          npm install himeka-capacitor-ffmpeg-kit --force
+
+      - name: Install dependencies (FORÇANDO instalação geral)
         run: npm install --force
 
       - name: Build Web Assets (Cria a pasta www)
@@ -34,8 +42,8 @@ jobs:
       - name: Add Android Platform
         run: npx cap add android
 
-      # === CORREÇÃO 2: CÓPIA MANUAL DO JAR FFmpeg (BUSCA EM TODA A NODE_MODULES) ===
-      # Esta etapa procura o JAR em qualquer lugar no node_modules para contornar o erro de nome de pasta.
+      # === CÓPIA MANUAL DO JAR FFmpeg (ÚLTIMO TESTE DE LOCALIZAÇÃO) ===
+      # Esta etapa procura o JAR em qualquer lugar no node_modules.
       - name: Copiar FFmpeg JAR (Busca GENÉRICA)
         run: |
           JAR_FILE=$(find node_modules -name "ffmpeg-kit-full-6.0-2.LTS.jar" -print -quit)

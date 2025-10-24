@@ -30,6 +30,9 @@ android {
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
 
+    // NOVA DEPENDÊNCIA DO FFmpeg: Necessária para que o novo plugin funcione
+    implementation 'com.arthenica:ffmpeg-kit-full:5.1.0'
+
     implementation "androidx.core:core-ktx:1.9.0"
     implementation "com.getcapacitor:capacitor-android:5.0.0" 
 

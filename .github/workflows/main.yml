@@ -23,7 +23,6 @@ jobs:
           java-version: '21'
 
       - name: Install dependencies (FORÇANDO instalação do FFmpeg)
-        # CORREÇÃO CRÍTICA: Adicionar --force para resolver conflito de dependências do FFmpeg
         run: npm install --force
 
       - name: Build Web Assets (Cria a pasta www)
@@ -36,7 +35,13 @@ jobs:
       - name: Add Android Platform
         run: npx cap add android
 
-      # === CORREÇÃO 2: COPIAR ASSETS DE PLUGINS (Força a cópia de arquivos como FFmpeg) ===
+      # === CORREÇÃO 2: CÓPIA MANUAL DO JAR FFmpeg (Última tentativa de resolver o erro) ===
+      # Esta é a solução mais agressiva: copiar o JAR do node_modules para o local correto.
+      - name: Copiar FFmpeg JAR manualmente
+        run: |
+          mkdir -p android/app/libs/
+          cp node_modules/himeka-capacitor-ffmpeg-kit/android/libs/ffmpeg-kit-full-6.0-2.LTS.jar android/app/libs/
+
       - name: Forçar Cópia de Assets do Capacitor
         run: npx cap copy android
 

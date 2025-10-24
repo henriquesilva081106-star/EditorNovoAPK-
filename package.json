@@ -23,11 +23,12 @@
     "App": {}
   },
   "devDependencies": {
-    "@capacitor/android": "^7.4.4",
     "@capacitor/cli": "^7.4.4",
     "vite": "^7.1.12"
   },
   "dependencies": {
-    "@himeka/capacitor-ffmpeg-kit": "^0.4.2"
+    "@capacitor/android": "^7.4.4",
+    "@capacitor/core": "^7.4.4"
+    /* As dependências que causavam conflito foram removidas! */
   }
 }

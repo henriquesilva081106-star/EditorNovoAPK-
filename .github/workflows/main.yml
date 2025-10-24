@@ -15,11 +15,12 @@ jobs:
         with:
           node-version: '20'
 
+      # Voltando para o Java 21, conforme sua preferência
       - name: Set up Java 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '21'
+          java-version: '21' 
 
       - name: Install dependencies (FORÇANDO instalação do FFmpeg)
         # CORREÇÃO CRÍTICA: Adicionar --force para resolver conflito de dependências do FFmpeg
@@ -28,16 +29,18 @@ jobs:
       - name: Build Web Assets (Cria a pasta www)
         run: npm run build
         
-      # === CORREÇÃO CRÍTICA DO ERRO ===
-      # Esta etapa remove a pasta 'android/' para que 'npx cap add android' possa ser executado
+      # === CORREÇÃO 1: Limpeza da pasta Android (Para o erro anterior) ===
       - name: Remover Artefato Antigo (Limpeza)
         run: rm -rf android/
-      
+
       - name: Add Android Platform
         run: npx cap add android
 
+      # === CORREÇÃO 2: Sincronização Forçada do Capacitor (Para o erro FFmpeg) ===
+      # Garante que os ficheiros .jar necessários, como o do FFmpeg, 
+      # são copiados para a pasta 'android' antes do build.
       - name: Initialize Capacitor and Sync
-        run: npx cap sync android
+        run: npx cap sync android --json
 
       - name: Set Permissions for Gradle Wrapper
         run: chmod +x android/gradlew

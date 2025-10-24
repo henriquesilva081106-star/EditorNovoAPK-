@@ -30,14 +30,11 @@ android {
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
 
-    // CORREÇÃO FFmpeg: Força o Gradle a encontrar o plugin que estava falhando.
-    implementation "com.github.himeka.capacitor:capacitor-ffmpeg-kit:1.0.0" 
+    // REMOVEMOS A LINHA FFmpeg-Kit AQUI!
 
-    // Dependências de núcleo do Android/Capacitor
     implementation "androidx.core:core-ktx:1.9.0"
     implementation "com.getcapacitor:capacitor-android:5.0.0" 
 
-    // Dependências de teste
     testImplementation "junit:junit:4.13.2"
     androidTestImplementation "androidx.test.ext:junit:1.1.5"
     androidTestImplementation "androidx.test.espresso:espresso-core:3.5.1"

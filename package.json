@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",
-    "@capacitor/core": "^7.4.4"
+    "@capacitor/core": "^7.4.4",
+    "@ffmpeg-kit/capacitor": "^5.1.0"
   }
 }

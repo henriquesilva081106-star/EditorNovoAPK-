@@ -1,4 +1,4 @@
-name: Build Android Debug APK
+run-name: Build Android Debug APK
 
 on:
   workflow_dispatch:
@@ -19,35 +19,31 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '21' 
+          java-version: '21'
 
       - name: Install dependencies (FORÇANDO instalação do FFmpeg)
+        # CORREÇÃO CRÍTICA: Adicionar --force para resolver conflito de dependências do FFmpeg
         run: npm install --force
 
       - name: Build Web Assets (Cria a pasta www)
         run: npm run build
-        
-      # === CORREÇÃO 1: Limpeza (Mantida) ===
+
+      # === CORREÇÃO 1: REMOÇÃO DE ARTEFATO ===
+      # Esta etapa remove a pasta 'android/' para resolver o erro "platform already exists."
       - name: Remover Artefato Antigo (Limpeza)
         run: rm -rf android/
-        
-      # === CORREÇÃO 2: Garantir que o Capacitor vê a pasta 'www' ===
-      # Garante que o ficheiro 'capacitor.config.json' aponta para a pasta correta (www).
-      - name: Configurar Diretório Web do Capacitor
-        run: npx cap sync
-        # O comando 'npx cap sync' por si só pode falhar, mas usaremos a sincronização
-        # de metadados antes de adicionar a plataforma Android para garantir que as configurações estão OK.
-        
+
       - name: Add Android Platform
         run: npx cap add android
 
-      # === CORREÇÃO 3: Sincronização Final do Capacitor ===
-      # A sincronização é feita aqui, após a plataforma ser adicionada.
+      # === CORREÇÃO 2: REMOÇÃO DE FLAG NÃO SUPORTADA ===
+      # Revertemos para a sincronização normal, o que resolve o erro '--json'
       - name: Initialize Capacitor and Sync
-        run: npx cap sync android --json
+        run: npx cap sync android
 
       - name: Set Permissions for Gradle Wrapper
         run: chmod +x android/gradlew
+        # Certifica-se de que as permissões são definidas após a pasta android/ ser criada.
 
       - name: Build Android Debug APK
         run: ./gradlew assembleDebug
@@ -58,4 +54,3 @@ jobs:
         with:
           name: app-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
-

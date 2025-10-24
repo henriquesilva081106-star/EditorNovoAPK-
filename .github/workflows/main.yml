@@ -1,4 +1,4 @@
-run-name: Build Android Debug APK
+name: Build Android Debug APK
 
 on:
   workflow_dispatch:
@@ -36,8 +36,11 @@ jobs:
       - name: Add Android Platform
         run: npx cap add android
 
-      # === CORREÇÃO 2: REMOÇÃO DE FLAG NÃO SUPORTADA ===
-      # Revertemos para a sincronização normal, o que resolve o erro '--json'
+      # === CORREÇÃO 2: COPIAR ASSETS DE PLUGINS (FIX FFmpeg) ===
+      # Esta etapa força a cópia de todos os arquivos de plugins (como o FFmpeg-Kit) para o local do Android.
+      - name: Forçar Cópia de Assets do Capacitor
+        run: npx cap copy android
+
       - name: Initialize Capacitor and Sync
         run: npx cap sync android
 

@@ -22,39 +22,19 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      # === NOVA ETAPA: REINSTALAR PLUGIN FFmpeg ===
-      # Garante que o plugin (e o JAR) sejam baixados corretamente.
-      - name: Reinstalar FFmpeg-Kit (Garantia de Download)
-        run: |
-          npm uninstall himeka-capacitor-ffmpeg-kit || true
-          npm cache clean --force
-          npm install himeka-capacitor-ffmpeg-kit --force
-
+      # Deixamos apenas o install geral, sem forçar o plugin que não existe.
       - name: Install dependencies (FORÇANDO instalação geral)
         run: npm install --force
 
       - name: Build Web Assets (Cria a pasta www)
         run: npm run build
 
+      # === CORREÇÕES DE FLUXO MANTIDAS ===
       - name: Remover Artefato Antigo (Limpeza)
         run: rm -rf android/
 
       - name: Add Android Platform
         run: npx cap add android
-
-      # === CÓPIA MANUAL DO JAR FFmpeg (ÚLTIMO TESTE DE LOCALIZAÇÃO) ===
-      # Esta etapa procura o JAR em qualquer lugar no node_modules.
-      - name: Copiar FFmpeg JAR (Busca GENÉRICA)
-        run: |
-          JAR_FILE=$(find node_modules -name "ffmpeg-kit-full-6.0-2.LTS.jar" -print -quit)
-          if [ -f "$JAR_FILE" ]; then
-            mkdir -p android/app/libs/
-            cp "$JAR_FILE" android/app/libs/
-            echo "Cópia bem-sucedida de $JAR_FILE"
-          else
-            echo "ERRO CRÍTICO: Não foi possível localizar o arquivo JAR do FFmpeg."
-            exit 1 # Força a falha da build se o arquivo não for encontrado.
-          fi
 
       - name: Forçar Cópia de Assets do Capacitor
         run: npx cap copy android
@@ -68,6 +48,7 @@ jobs:
       - name: Set Permissions for Gradle Wrapper
         run: chmod +x android/gradlew
 
+      # === A ÚLTIMA ETAPA FINALMENTE EXECUTADA ===
       - name: Build Android Debug APK
         run: ./gradlew assembleDebug --rerun-tasks
         working-directory: ./android

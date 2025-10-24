@@ -28,18 +28,17 @@ jobs:
       - name: Build Web Assets (Cria a pasta www)
         run: npm run build
 
-      # === CORREÇÃO 1: REMOÇÃO DE ARTEFATO ===
       - name: Remover Artefato Antigo (Limpeza)
         run: rm -rf android/
 
       - name: Add Android Platform
         run: npx cap add android
 
-      # === CORREÇÃO 2: CÓPIA MANUAL DO JAR FFmpeg (CORREÇÃO DE CAMINHO) ===
-      # Corrigimos o nome da pasta no node_modules.
-      - name: Copiar FFmpeg JAR (Busca Automática - CORRIGIDA)
+      # === CORREÇÃO 2: CÓPIA MANUAL DO JAR FFmpeg (BUSCA EM TODA A NODE_MODULES) ===
+      # Esta etapa procura o JAR em qualquer lugar no node_modules para contornar o erro de nome de pasta.
+      - name: Copiar FFmpeg JAR (Busca GENÉRICA)
         run: |
-          JAR_FILE=$(find node_modules/capacitor-ffmpeg-kit -name "ffmpeg-kit-full-6.0-2.LTS.jar" -print -quit)
+          JAR_FILE=$(find node_modules -name "ffmpeg-kit-full-6.0-2.LTS.jar" -print -quit)
           if [ -f "$JAR_FILE" ]; then
             mkdir -p android/app/libs/
             cp "$JAR_FILE" android/app/libs/
@@ -55,14 +54,12 @@ jobs:
       - name: Initialize Capacitor and Sync
         run: npx cap sync android
 
-      # === CORREÇÃO 3: LIMPEZA AGRESSIVA DO GRADLE ===
       - name: Limpar Cache do Gradle
         run: rm -rf ~/.gradle/caches/
 
       - name: Set Permissions for Gradle Wrapper
         run: chmod +x android/gradlew
 
-      # === CORREÇÃO 4: FORÇAR A REEXECUÇÃO DA BUILD ===
       - name: Build Android Debug APK
         run: ./gradlew assembleDebug --rerun-tasks
         working-directory: ./android

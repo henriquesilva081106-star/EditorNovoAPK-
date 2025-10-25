@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.henrique.videoeditor"> <!-- Certifique-se que o 'package' está correto -->
+    package="com.henrique.videoeditor"> <!-- CONFIRME: Este deve ser igual ao appId no capacitor.config.json -->
 
     <application
         android:allowBackup="true"
@@ -8,7 +8,8 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme">
+        android:theme="@style/AppTheme"
+        android:usesCleartextTraffic="true"> <!-- Permite tráfego HTTP se necessário (ex: servidor local) -->
 
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
@@ -36,21 +37,20 @@
         </provider>
     </application>
 
-    <!-- Permissões Requeridas -->
-    <!-- Para ler vídeos da galeria (Android 12 e inferior) -->
+    <!-- Permissões Essenciais -->
+    <!-- Ler Mídia (Vídeos/Imagens) -->
+    <!-- Android 13+ (O plugin Camera pede estas) -->
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <!-- Android 12 e Inferior (Necessário se Camera não pedir READ_EXTERNAL_STORAGE) -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-    
-    <!-- Para ler vídeos da galeria (Android 13 e superior) -->
-    <!-- A permissão READ_MEDIA_IMAGES é geralmente solicitada junto pelo plugin Camera -->
-    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" /> 
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" /> <!-- Adicionado por segurança -->
 
-    <!-- Para salvar em Downloads (principalmente para Android 9 e inferior) -->
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+    <!-- Salvar/Escrever (O plugin Filesystem lida com o Scoped Storage) -->
+    <!-- WRITE_EXTERNAL_STORAGE geralmente NÃO é mais necessário para salvar em Downloads/Cache -->
+    <!-- <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" /> -->
 
-    <!-- Permissão de Câmera (se você fosse gravar vídeo diretamente) -->
-    <!-- <uses-permission android:name="android.permission.CAMERA" /> -->
-    <!-- <uses-feature android:name="android.hardware.camera" android:required="false" /> -->
+    <!-- Permissão de Internet (Se usar APIs externas como Gemini) -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
 </manifest>
 

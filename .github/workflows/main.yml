@@ -22,7 +22,7 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      # Instalação final e forte
+      # Instalação final e forte (agora com o novo plugin)
       - name: Install dependencies (FORÇANDO instalação geral)
         run: npm install --force --legacy-peer-deps
 
@@ -35,6 +35,7 @@ jobs:
       - name: Add Android Platform
         run: npx cap add android
 
+      # ETAPA CRÍTICA: Sincroniza o novo plugin com o Android
       - name: Forçar Cópia de Assets do Capacitor
         run: npx cap copy android
 

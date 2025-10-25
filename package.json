@@ -29,6 +29,6 @@
   "dependencies": {
     "@capacitor/android": "^7.4.4",
     "@capacitor/core": "^7.4.4",
-    "@ffmpeg-kit/android": "^5.1.0"
+    "@whiteguru/capacitor-plugin-video-editor": "^1.0.2"
   }
 }

@@ -30,8 +30,8 @@ android {
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
 
-    // FFmpeg FUNCIONAL: Dependência de Gradle correta
-    implementation 'com.arthenica:ffmpeg-kit-full:5.1.0'
+    // A dependência 'com.arthenica:ffmpeg-kit-full' foi removida.
+    // O 'npx cap sync' irá adicionar as dependências do novo plugin aqui.
 
     implementation "androidx.core:core-ktx:1.9.0"
     implementation "com.getcapacitor:capacitor-android:5.0.0" 
